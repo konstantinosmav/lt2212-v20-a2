@@ -4,22 +4,71 @@ from sklearn.datasets import fetch_20newsgroups
 from sklearn.base import is_classifier
 import numpy as np
 random.seed(42)
-
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.decomposition import TruncatedSVD
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import f1_score
+from sklearn.neighbors import KNeighborsClassifier 
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 
 ###### PART 1
 #DONT CHANGE THIS FUNCTION
 def part1(samples):
-    #extract features
-    X = extract_features(samples)
+    #extract matrix
+    X = extract_matrix(samples)
     assert type(X) == np.ndarray
     print("Example sample feature vec: ", X[0])
     print("Data shape: ", X.shape)
     return X
 
+    
+  
+   
+def extract_matrix(samples):
+   print("Extracting matrix ...")
+   starting_index_of_word = 0
+   all_dicts_of_rows = []
 
-def extract_features(samples):
-    print("Extracting features ...")
-    pass #Fill this in
+   map_word_to_index = {}
+   for sample in samples:
+       #print(sample)
+       count_of_rows = {}
+       words = [w.lower() for w in sample.split() if w.isalpha()]
+       for w in words:
+           if w not in map_word_to_index:                   
+               map_word_to_index[w] = starting_index_of_word
+               inner_index = starting_index_of_word
+               starting_index_of_word += 1            
+           else:
+               inner_index = map_word_to_index[w]               
+           if inner_index not in count_of_rows:
+               count_of_rows[inner_index] = 1
+           else:
+               count_of_rows[inner_index] += 1
+       all_dicts_of_rows.append(count_of_rows)
+   num_of_rows = len(samples)
+   num_of_columns = len(map_word_to_index)
+   #print(all_dicts_of_rows) 
+   matrix = np.zeros((num_of_rows, num_of_columns))
+   for number, dict in enumerate(all_dicts_of_rows):
+       for key, value in dict.items():           
+           matrix[number, key] = value
+   sum_of_columns = np.sum(matrix, axis=0)
+   filtered_words = []
+   for j in range(len(sum_of_columns)):
+       if sum_of_columns[j] < 20:
+           filtered_words.append(j)
+   filtered_matrix = np.delete(matrix, filtered_words, axis=1)
+   #print(filtered_matrix)
+   return filtered_matrix
+    
+
 
 
 
@@ -37,8 +86,10 @@ def part2(X, n_dim):
 
 
 def reduce_dim(X,n=10):
-    #fill this in
-    pass
+    svd = TruncatedSVD(n_components=n, n_iter=6, random_state=42)
+    dim_red = svd.fit_transform(X)
+    return dim_red
+
 
 
 
@@ -46,9 +97,9 @@ def reduce_dim(X,n=10):
 #DONT CHANGE THIS FUNCTION EXCEPT WHERE INSTRUCTED
 def get_classifier(clf_id):
     if clf_id == 1:
-        clf = "" # <--- REPLACE THIS WITH A SKLEARN MODEL
+        clf = GaussianNB() # <--- REPLACE THIS WITH A SKLEARN MODEL
     elif clf_id == 2:
-        clf = "" # <--- REPLACE THIS WITH A SKLEARN MODEL
+        clf = DecisionTreeClassifier()  # <--- REPLACE THIS WITH A SKLEARN MODEL
     else:
         raise KeyError("No clf with id {}".format(clf_id))
 
@@ -84,17 +135,25 @@ def part3(X, y, clf_id):
 
 
 def shuffle_split(X,y):
-    pass # Fill in this
-
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=8)
+    return X_train, X_test, y_train, y_test
 
 def train_classifer(clf, X, y):
     assert is_classifier(clf)
-    ## fill in this
+    clf.fit(X,y)
+    return clf
 
 
 def evalute_classifier(clf, X, y):
     assert is_classifier(clf)
-    #Fill this in
+    clf_accuracy = accuracy_score(y, clf.predict(X))    
+    clf_precision = precision_score(y, clf.predict(X), average='weighted')
+    clf_recall = recall_score(y, clf.predict(X), average='weighted')
+    clf_f1 = f1_score(y, clf.predict(X), average='weighted')
+    print('accuracy score: ', clf_accuracy, ', precision score: ', clf_precision, ', recall score: ', clf_recall, ', F1 score: ', clf_f1)
+    
+
+    
 
 
 ######
@@ -139,7 +198,7 @@ if __name__ == '__main__':
                         default=False,
                         type=int,
                         required=False,
-                        help="int for number of dimension you want to reduce the features for")
+                        help="int for number of dimension you want to reduce the matrix for")
 
     parser.add_argument("-m",
                         "--model_id",
